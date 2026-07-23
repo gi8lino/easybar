@@ -70,6 +70,8 @@ extension IPC {
     public let luaRestartCount: Int
     public let luaReady: Bool
     public let subscribedEventCount: Int
+    /// Sorted global Lua event subscriptions. `nil` when decoded from an older EasyBar process.
+    public let subscribedEvents: [String]?
     public let totalEvents: Int
     public let appEvents: Int
     public let widgetEvents: Int
@@ -79,8 +81,17 @@ extension IPC {
     public let coalescedEvents: Int
     public let coalescedEventsPerSecond: Double
     public let transportLines: Int
+    /// Legacy total of all lines received on the Lua stderr pipe.
     public let stderrLines: Int
     public let luaWrites: Int
+    /// Structured Lua log lines. `nil` when decoding metrics from an older EasyBar process.
+    public let luaLogLines: Int?
+    /// Structured Lua warning lines. `nil` when the sender does not support the breakdown.
+    public let luaWarningLines: Int?
+    /// Structured Lua error lines. `nil` when the sender does not support the breakdown.
+    public let luaErrorLines: Int?
+    /// Unstructured Lua stderr lines. `nil` when the sender does not support the breakdown.
+    public let luaRawStderrLines: Int?
     public let treeUpdates: Int
     public let treeUpdatesPerSecond: Double
     public let decodeErrors: Int
@@ -97,6 +108,7 @@ extension IPC {
       luaRestartCount: Int,
       luaReady: Bool,
       subscribedEventCount: Int,
+      subscribedEvents: [String]? = nil,
       totalEvents: Int,
       appEvents: Int,
       widgetEvents: Int,
@@ -108,6 +120,10 @@ extension IPC {
       transportLines: Int,
       stderrLines: Int,
       luaWrites: Int,
+      luaLogLines: Int? = nil,
+      luaWarningLines: Int? = nil,
+      luaErrorLines: Int? = nil,
+      luaRawStderrLines: Int? = nil,
       treeUpdates: Int,
       treeUpdatesPerSecond: Double,
       decodeErrors: Int,
@@ -122,6 +138,7 @@ extension IPC {
       self.luaRestartCount = luaRestartCount
       self.luaReady = luaReady
       self.subscribedEventCount = subscribedEventCount
+      self.subscribedEvents = subscribedEvents
       self.totalEvents = totalEvents
       self.appEvents = appEvents
       self.widgetEvents = widgetEvents
@@ -133,6 +150,10 @@ extension IPC {
       self.transportLines = transportLines
       self.stderrLines = stderrLines
       self.luaWrites = luaWrites
+      self.luaLogLines = luaLogLines
+      self.luaWarningLines = luaWarningLines
+      self.luaErrorLines = luaErrorLines
+      self.luaRawStderrLines = luaRawStderrLines
       self.treeUpdates = treeUpdates
       self.treeUpdatesPerSecond = treeUpdatesPerSecond
       self.decodeErrors = decodeErrors

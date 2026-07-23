@@ -73,9 +73,6 @@ extension MetricsCoordinator {
       droppedEvents: snapshotState.droppedEvents,
       coalescedEvents: snapshotState.coalescedEvents,
       treeUpdates: snapshotState.treeUpdates,
-      transportLines: snapshotState.transportLines,
-      stderrLines: snapshotState.stderrLines,
-      luaWrites: snapshotState.luaWrites,
       agentMessages: AgentKey.allCases.reduce(into: [:]) { result, key in
         result[key] = snapshotState.agents[key]?.messagesTotal ?? 0
       },
@@ -98,6 +95,7 @@ extension MetricsCoordinator {
       luaRestartCount: snapshotState.luaRestartCount,
       luaReady: snapshotState.luaReady,
       subscribedEventCount: snapshotState.subscribedEvents.count,
+      subscribedEvents: snapshotState.subscribedEvents.sorted(),
       totalEvents: snapshotState.totalEvents,
       appEvents: snapshotState.appEvents,
       widgetEvents: snapshotState.widgetEvents,
@@ -119,8 +117,12 @@ extension MetricsCoordinator {
         context: rateContext
       ),
       transportLines: snapshotState.transportLines,
-      stderrLines: snapshotState.stderrLines,
+      stderrLines: snapshotState.luaLogLines + snapshotState.luaRawStderrLines,
       luaWrites: snapshotState.luaWrites,
+      luaLogLines: snapshotState.luaLogLines,
+      luaWarningLines: snapshotState.luaWarningLines,
+      luaErrorLines: snapshotState.luaErrorLines,
+      luaRawStderrLines: snapshotState.luaRawStderrLines,
       treeUpdates: snapshotState.treeUpdates,
       treeUpdatesPerSecond: rate(
         current: snapshotState.treeUpdates,

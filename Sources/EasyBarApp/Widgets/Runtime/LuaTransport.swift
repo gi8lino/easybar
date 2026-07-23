@@ -86,10 +86,11 @@ final class LuaTransport: @unchecked Sendable {
     let stderrTask = DetachedTask.run(priority: .utility) { [weak self] in
       guard let self else { return }
       self.readLinesFromFD(stderrFD, generation: generation) { [weak self] line in
+        guard let self else { return }
+        let classification = self.logBridge.handle(line)
         Task {
-          await self?.metricsCoordinator.recordLuaStderrLine()
+          await self.metricsCoordinator.recordLuaStderrLine(classification)
         }
-        self?.logBridge.handle(line)
       }
     }
 

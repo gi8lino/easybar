@@ -84,9 +84,6 @@ actor MetricsCoordinator {
     var droppedEvents: Int
     var coalescedEvents: Int
     var treeUpdates: Int
-    var transportLines: Int
-    var stderrLines: Int
-    var luaWrites: Int
     var agentMessages: [AgentKey: Int]
     var widgetUpdates: [String: Int]
     var eventCounts: [String: Int]
@@ -128,8 +125,11 @@ actor MetricsCoordinator {
     var coalescedEventCounts: [String: Int] = [:]
 
     var transportLines = 0
-    var stderrLines = 0
     var luaWrites = 0
+    var luaLogLines = 0
+    var luaWarningLines = 0
+    var luaErrorLines = 0
+    var luaRawStderrLines = 0
     var decodeErrors = 0
     var luaRuntimeInputOverflows = 0
     var luaEventQueueDepth = 0
@@ -274,9 +274,19 @@ actor MetricsCoordinator {
     state.transportLines += 1
   }
 
-  /// Records one line read from Lua stderr.
-  func recordLuaStderrLine() {
-    state.stderrLines += 1
+  /// Records one classified line read from the Lua runtime's stderr pipe.
+  func recordLuaStderrLine(_ classification: LuaStderrLineClassification) {
+    switch classification {
+    case .structured(let level):
+      state.luaLogLines += 1
+      if level == .warn {
+        state.luaWarningLines += 1
+      } else if level == .error {
+        state.luaErrorLines += 1
+      }
+    case .raw:
+      state.luaRawStderrLines += 1
+    }
   }
 
   /// Records one runtime decode failure.

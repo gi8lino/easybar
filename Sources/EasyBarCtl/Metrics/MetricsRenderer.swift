@@ -27,6 +27,7 @@ enum MetricsRenderer {
       header(snapshot, live: false),
       processes(snapshot),
       runtime(snapshot),
+      subscriptions(snapshot),
       agents(snapshot),
       widgets(snapshot),
       events(snapshot),
@@ -42,6 +43,7 @@ enum MetricsRenderer {
       graphs(snapshot, history: history),
       processes(snapshot),
       runtime(snapshot),
+      subscriptions(snapshot),
       agents(snapshot),
       widgets(snapshot),
       events(snapshot),
@@ -111,11 +113,54 @@ enum MetricsRenderer {
     return lines.joined(separator: "\n")
   }
 
+  /// Renders the global event names forwarded to the Lua runtime.
+  private static func subscriptions(_ snapshot: IPC.MetricsSnapshot) -> String {
+    guard let events = snapshot.runtime.subscribedEvents else { return "" }
+    guard !events.isEmpty else { return "Subscribed events\nnone" }
+
+    return (["Subscribed events (\(events.count))"] + events.map { "- \(subscription($0))" })
+      .joined(separator: "\n")
+  }
+
+  /// Formats internal timer subscription keys as widget-oriented intervals.
+  private static func subscription(_ event: String) -> String {
+    let parts = event.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
+    guard parts.count == 3,
+      parts[0] == "interval_tick",
+      !parts[1].isEmpty,
+      let seconds = Double(parts[2]),
+      seconds > 0
+    else {
+      return event
+    }
+
+    return "\(parts[1]) (every \(duration(seconds)))"
+  }
+
+  /// Formats one positive interval using the largest exact unit.
+  private static func duration(_ seconds: Double) -> String {
+    if seconds.truncatingRemainder(dividingBy: 3600) == 0 {
+      return "\(compactNumber(seconds / 3600))h"
+    }
+    if seconds.truncatingRemainder(dividingBy: 60) == 0 {
+      return "\(compactNumber(seconds / 60))m"
+    }
+    return "\(compactNumber(seconds))s"
+  }
+
+  /// Formats interval values without a redundant decimal for whole numbers.
+  private static func compactNumber(_ value: Double) -> String {
+    if value.rounded() == value {
+      return String(Int(value))
+    }
+    return number(value)
+  }
+
   /// Renders runtime counters and rates.
   private static func runtime(_ snapshot: IPC.MetricsSnapshot) -> String {
     let runtime = snapshot.runtime
 
-    return [
+    var lines = [
       "Runtime",
       row([
         column("metric", width: 16),
@@ -174,28 +219,63 @@ enum MetricsRenderer {
       row([
         column("event_queue", width: 16),
         column(String(runtime.luaEventQueueDepth), width: 18),
-        column("", width: 16),
-        column("", width: 18),
+        column(
+          runtime.luaLogLines == nil ? "lua_stderr" : "lua_logs",
+          width: 16
+        ),
+        column(
+          String(runtime.luaLogLines ?? runtime.stderrLines),
+          width: 18
+        ),
       ]),
       row([
-        column("transport/err", width: 16),
-        column("\(runtime.transportLines)/\(runtime.stderrLines)", width: 18),
+        column("lua_reads", width: 16),
+        column(String(runtime.transportLines), width: 18),
         column("lua_writes", width: 16),
         column(String(runtime.luaWrites), width: 18),
       ]),
+    ]
+
+    if let warningLines = runtime.luaWarningLines,
+      let errorLines = runtime.luaErrorLines,
+      let rawStderrLines = runtime.luaRawStderrLines
+    {
+      lines.append(
+        row([
+          column("lua_warn", width: 16),
+          column(String(warningLines), width: 18),
+          column("lua_error", width: 16),
+          column(String(errorLines), width: 18),
+        ])
+      )
+      lines.append(
+        row([
+          column("lua_raw_stderr", width: 16),
+          column(String(rawStderrLines), width: 18),
+          column("", width: 16),
+          column("", width: 18),
+        ])
+      )
+    }
+
+    lines.append(
       row([
         column("last_tree", width: 16),
         column(runtime.lastTreeRoot ?? "-", width: 18),
         column("tree_nodes", width: 16),
         column(runtime.lastTreeNodeCount.map(String.init) ?? "-", width: 18),
-      ]),
+      ])
+    )
+    lines.append(
       row([
         column("last_tree_age", width: 16),
         column(relative(runtime.lastTreeAt), width: 18),
         column("sample", width: 16),
         column(sampleInterval(snapshot.sampleIntervalSeconds), width: 18),
-      ]),
-    ].joined(separator: "\n")
+      ])
+    )
+
+    return lines.joined(separator: "\n")
   }
 
   /// Renders per-agent connection and process metrics.
@@ -234,11 +314,11 @@ enum MetricsRenderer {
   /// Renders per-widget update metrics.
   private static func widgets(_ snapshot: IPC.MetricsSnapshot) -> String {
     guard !snapshot.widgets.isEmpty else {
-      return "Widgets\nnone"
+      return "Widget trees (top 8)\nnone"
     }
 
     let header = row([
-      column("id", width: 16),
+      column("id", width: 24),
       column("updates", width: 12),
       column("nodes", width: 6),
       column("last", width: 6),
@@ -246,20 +326,20 @@ enum MetricsRenderer {
 
     let body = snapshot.widgets.map { widget in
       row([
-        column(widget.id, width: 16),
+        column(widget.id, width: 24),
         column("\(widget.updatesTotal) (\(number(widget.updatesPerSecond))/s)", width: 12),
         column(String(widget.lastNodeCount), width: 6),
         column(relative(widget.lastUpdatedAt), width: 6),
       ])
     }
 
-    return (["Widgets", header] + body).joined(separator: "\n")
+    return (["Widget trees (top 8)", header] + body).joined(separator: "\n")
   }
 
   /// Renders per-event totals, rates, drops, and coalescing counts.
   private static func events(_ snapshot: IPC.MetricsSnapshot) -> String {
     guard !snapshot.events.isEmpty else {
-      return "Events\nnone"
+      return "Events (top 8)\nnone"
     }
 
     let header = row([
@@ -280,7 +360,7 @@ enum MetricsRenderer {
       ])
     }
 
-    return (["Events", header] + body).joined(separator: "\n")
+    return (["Events (top 8)", header] + body).joined(separator: "\n")
   }
 
   /// Renders the shared process table header.
