@@ -112,9 +112,11 @@ final class LuaCommandRunnerTests: XCTestCase {
       logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
     )
     let markerPath = "/tmp/easybar-lua-command-runner-\(UUID().uuidString)"
+    let limits = defaultLimits
+
     defer { try? FileManager.default.removeItem(atPath: markerPath) }
 
-    let task = Task {
+    let task = Task { [runner, markerPath, limits] in
       do {
         try await Task.sleep(nanoseconds: 60_000_000_000)
       } catch {
@@ -123,7 +125,7 @@ final class LuaCommandRunnerTests: XCTestCase {
 
       return await runner.run(
         arguments: ["/usr/bin/touch", markerPath],
-        limits: defaultLimits
+        limits: limits
       )
     }
 
@@ -357,5 +359,4 @@ final class LuaCommandRunnerTests: XCTestCase {
     }
     return false
   }
-
 }
