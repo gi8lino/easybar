@@ -64,7 +64,7 @@ struct MetricsHistory {
   /// Adds one value to a metric series and trims it to the configured limit.
   private mutating func append(_ value: Double, for key: String) {
     var values = series[key] ?? []
-    values.append(max(0, value))
+    values.append(value.isFinite ? max(0, value) : 0)
 
     if values.count > limit {
       values.removeFirst(values.count - limit)

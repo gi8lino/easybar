@@ -160,6 +160,44 @@ final class LuaMetricsTests: XCTestCase {
     XCTAssertFalse(lines.contains { $0.hasPrefix("Runtime") && $0.contains("Delivery") })
   }
 
+  func testMetricsRendererHandlesNonFiniteAndHugeIntervalDurations() {
+    let value = snapshot(
+      runtime: runtimeMetrics(
+        subscribedEvents: [
+          "interval_tick:infinite:inf",
+          "interval_tick:huge:1e20",
+        ],
+        stderrLines: 0
+      )
+    )
+
+    let text = MetricsRenderer.snapshotText(value)
+
+    XCTAssertTrue(text.contains("- interval_tick:infinite:inf"))
+    XCTAssertTrue(text.contains("- huge (every "))
+    XCTAssertFalse(text.contains("interval_tick:huge:1e20"))
+  }
+
+  func testWatchRendererSanitizesNonFiniteSamples() {
+    let value = snapshot(
+      runtime: runtimeMetrics(
+        stderrLines: 0,
+        eventsPerSecond: .nan,
+        treeUpdatesPerSecond: .infinity
+      ),
+      processCPUPercent: .nan,
+      processResidentSizeBytes: UInt64.max
+    )
+    var history = MetricsHistory(limit: 32)
+    history.append(value)
+
+    let text = MetricsRenderer.watchText(value, history: history, terminalWidth: 120)
+      .lowercased()
+
+    XCTAssertFalse(text.contains("nan"))
+    XCTAssertFalse(text.contains("inf"))
+  }
+
   func testRuntimeMetricsDecodesPayloadWithoutLuaLogBreakdown() throws {
     let encoder = JSONEncoder()
     let encoded = try encoder.encode(runtimeMetrics(stderrLines: 7))
@@ -196,12 +234,21 @@ final class LuaMetricsTests: XCTestCase {
     XCTAssertEqual(level.rawValue, expectedLevel.rawValue, file: file, line: line)
   }
 
-  private func snapshot(runtime: IPC.RuntimeMetrics) -> IPC.MetricsSnapshot {
+  private func snapshot(
+    runtime: IPC.RuntimeMetrics,
+    processCPUPercent: Double? = nil,
+    processResidentSizeBytes: UInt64? = nil
+  ) -> IPC.MetricsSnapshot {
     IPC.MetricsSnapshot(
       timestamp: Date(timeIntervalSince1970: 0),
       collectionEnabled: false,
       sampleIntervalSeconds: 1,
-      process: IPC.ProcessMetrics(name: "EasyBar", running: true),
+      process: IPC.ProcessMetrics(
+        name: "EasyBar",
+        running: true,
+        cpuPercent: processCPUPercent,
+        residentSizeBytes: processResidentSizeBytes
+      ),
       lua: IPC.ProcessMetrics(name: "lua", running: true),
       runtime: runtime,
       agents: [],
@@ -232,7 +279,9 @@ final class LuaMetricsTests: XCTestCase {
     luaLogLines: Int? = nil,
     luaWarningLines: Int? = nil,
     luaErrorLines: Int? = nil,
-    luaRawStderrLines: Int? = nil
+    luaRawStderrLines: Int? = nil,
+    eventsPerSecond: Double = 0,
+    treeUpdatesPerSecond: Double = 0
   ) -> IPC.RuntimeMetrics {
     IPC.RuntimeMetrics(
       subscriberCount: 0,
@@ -243,7 +292,7 @@ final class LuaMetricsTests: XCTestCase {
       totalEvents: 0,
       appEvents: 0,
       widgetEvents: 0,
-      eventsPerSecond: 0,
+      eventsPerSecond: eventsPerSecond,
       droppedEvents: 0,
       droppedEventsPerSecond: 0,
       coalescedEvents: 0,
@@ -256,7 +305,7 @@ final class LuaMetricsTests: XCTestCase {
       luaErrorLines: luaErrorLines,
       luaRawStderrLines: luaRawStderrLines,
       treeUpdates: 0,
-      treeUpdatesPerSecond: 0,
+      treeUpdatesPerSecond: treeUpdatesPerSecond,
       decodeErrors: 0,
       luaRuntimeInputOverflows: 0,
       luaEventQueueDepth: 0,

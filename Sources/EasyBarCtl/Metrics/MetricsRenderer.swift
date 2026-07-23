@@ -410,6 +410,7 @@ enum MetricsRenderer {
       parts[0] == "interval_tick",
       !parts[1].isEmpty,
       let seconds = Double(parts[2]),
+      seconds.isFinite,
       seconds > 0
     else {
       return event
@@ -432,8 +433,10 @@ enum MetricsRenderer {
 
   /// Formats interval values without a redundant decimal for whole numbers.
   private static func compactNumber(_ value: Double) -> String {
+    guard value.isFinite else { return "-" }
+
     if value.rounded() == value {
-      return String(Int(value))
+      return String(format: "%.0f", value)
     }
     return number(value)
   }
@@ -694,8 +697,13 @@ enum MetricsRenderer {
     guard !values.isEmpty else { return "[" + String(repeating: " ", count: fixedWidth) + "]" }
 
     let symbols = Array("▁▂▃▄▅▆▇█")
-    let maxValue = absoluteMax ?? (values.max() ?? 0)
-    let visibleValues = Array(values.suffix(fixedWidth))
+    let visibleValues = values.suffix(fixedWidth).map { value in
+      value.isFinite ? max(0, value) : 0
+    }
+    let finiteAbsoluteMax = absoluteMax.flatMap { value in
+      value.isFinite && value > 0 ? value : nil
+    }
+    let maxValue = finiteAbsoluteMax ?? (visibleValues.max() ?? 0)
     let leadingPadding = max(0, fixedWidth - visibleValues.count)
 
     guard maxValue > 0 else {
@@ -732,7 +740,7 @@ enum MetricsRenderer {
 
   /// Formats an optional numeric metric value.
   private static func number(_ value: Double?) -> String {
-    guard let value else { return "-" }
+    guard let value, value.isFinite else { return "-" }
 
     if value == 0 {
       return "0.0"
@@ -747,7 +755,7 @@ enum MetricsRenderer {
 
   /// Formats an optional percentage metric value.
   private static func percent(_ value: Double?) -> String {
-    guard let value else { return "-" }
+    guard let value, value.isFinite else { return "-" }
 
     if value == 0 {
       return "0.0%"
@@ -762,7 +770,7 @@ enum MetricsRenderer {
 
   /// Formats an optional byte count.
   private static func bytes(_ value: UInt64?) -> String {
-    guard let value else { return "-" }
+    guard let value, value <= UInt64(Int64.max) else { return "-" }
     return byteFormatter.string(fromByteCount: Int64(value))
   }
 
@@ -773,8 +781,9 @@ enum MetricsRenderer {
 
   /// Returns the arithmetic mean for a series of values.
   private static func average(_ values: [Double]) -> Double? {
-    guard !values.isEmpty else { return nil }
-    return values.reduce(0, +) / Double(values.count)
+    let finiteValues = values.filter(\.isFinite)
+    guard !finiteValues.isEmpty else { return nil }
+    return finiteValues.reduce(0, +) / Double(finiteValues.count)
   }
 
   /// Joins preformatted columns into one table row.
