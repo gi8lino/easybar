@@ -56,7 +56,9 @@ private func renderDefaults() -> String {
     }
   }
 
-  return lines.joined(separator: "\n") + "\n"
+  return lines.joined(separator: "\n")
+    .trimmingCharacters(in: .newlines)
+    + "\n"
 }
 
 private func documentedSections() -> [(name: String, entries: [CatalogEntry])] {

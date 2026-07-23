@@ -12,6 +12,14 @@ final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
     }
   }
 
+  func testGeneratedDefaultsEndWithOneNewline() throws {
+    let defaultsFileURL = repoRootURL().appendingPathComponent("config.defaults.toml")
+    let defaults = try String(contentsOf: defaultsFileURL, encoding: .utf8)
+
+    XCTAssertTrue(defaults.hasSuffix("\n"))
+    XCTAssertFalse(defaults.hasSuffix("\n\n"))
+  }
+
   /// Verifies that the checked-in full defaults file matches the built-in Swift defaults.
   func testConfigDefaultsTomlMatchesBuiltInDefaults() throws {
     let missingConfigURL =
