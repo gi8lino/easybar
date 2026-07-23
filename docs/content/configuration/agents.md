@@ -74,6 +74,15 @@ The default is privacy-first: requests for Wi-Fi fields fail until location acce
 
 ## Troubleshooting
 
+Query the versions of both running agents and compare them with EasyBar:
+
+```bash
+easybar agent version all
+```
+
+Use `easybar agent version calendar` or `easybar agent version network` to query one agent. Add
+`--json` when consuming the result from a script.
+
 For agent process checks, socket probes, permission issues, raw field inspection, and Homebrew service logs, use [Debugging Agents](../internals/agents/debugging.md).
 
 ## More detail

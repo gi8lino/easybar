@@ -30,4 +30,8 @@ enum AppError: Error {
   case showVersion
   /// Carries a user-facing error message.
   case message(String)
+  /// Reports an operational failure without appending command usage.
+  case commandFailed(String)
+  /// Returns a failing status after the command already printed its diagnostics.
+  case reportedFailure
 }

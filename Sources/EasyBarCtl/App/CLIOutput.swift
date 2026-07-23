@@ -2,6 +2,26 @@ import Darwin
 import EasyBarShared
 import Foundation
 
+struct AgentVersionStatus: Codable, Equatable {
+  let version: String?
+  let protocolVersion: String?
+  let matchesEasyBar: Bool
+  let error: String?
+
+  private enum CodingKeys: String, CodingKey {
+    case version
+    case protocolVersion = "protocol_version"
+    case matchesEasyBar = "matches_easybar"
+    case error
+  }
+}
+
+struct AgentVersionOutputEntry: Equatable {
+  let key: String
+  let label: String
+  let status: AgentVersionStatus
+}
+
 /// Prints user-facing CLI output.
 enum CLIOutput {
   static func printError(_ message: String) {
@@ -105,6 +125,31 @@ enum CLIOutput {
 
   static func printMetricsSnapshot(_ snapshot: IPC.MetricsSnapshot) {
     fputs(MetricsRenderer.snapshotText(snapshot) + "\n", stdout)
+  }
+
+  static func printAgentVersions(_ entries: [AgentVersionOutputEntry], json: Bool) throws {
+    if json {
+      let output = Dictionary(uniqueKeysWithValues: entries.map { ($0.key, $0.status) })
+      let encoder = JSONEncoder()
+      encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+      let data = try encoder.encode(output)
+      guard let text = String(data: data, encoding: .utf8) else {
+        throw AppError.commandFailed("failed to encode agent version output")
+      }
+      fputs(text + "\n", stdout)
+      return
+    }
+
+    for entry in entries {
+      if let error = entry.status.error {
+        fputs("\(entry.label): unavailable (\(error))\n", stdout)
+        continue
+      }
+      let version = entry.status.version ?? "unknown"
+      let protocolVersion = entry.status.protocolVersion ?? "unknown"
+      let mismatch = entry.status.matchesEasyBar ? "" : " [mismatch]"
+      fputs("\(entry.label): \(version) (protocol \(protocolVersion))\(mismatch)\n", stdout)
+    }
   }
 
   static func printInboxItems(_ items: [IPC.InboxItem], json: Bool) throws {

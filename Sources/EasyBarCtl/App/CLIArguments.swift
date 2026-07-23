@@ -179,6 +179,30 @@ private func parseCommand(
     )
     return .restartAgent(target)
 
+  case .versionAgent(let target):
+    var json = false
+    var index = 0
+    while index < arguments.count {
+      let argument = arguments[index]
+      if CLI.jsonOption.matches(argument) {
+        json = true
+        index += 1
+        continue
+      }
+      if let nextIndex = try parseGlobalArgument(
+        argument,
+        arguments: arguments,
+        index: index,
+        state: &global,
+        helpTopic: descriptor.path
+      ) {
+        index = nextIndex
+        continue
+      }
+      throw AppError.message("unknown agent version option '\(argument)'")
+    }
+    return .versionAgent(target, json: json)
+
   case .emitEvent:
     var eventName: String?
     var index = 0

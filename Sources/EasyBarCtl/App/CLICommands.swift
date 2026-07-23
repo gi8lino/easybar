@@ -114,6 +114,118 @@ func restartAgents(context: AppContext) throws {
   context.debug("both agent restart requests were acknowledged")
 }
 
+/// Queries and prints versions from one or both running helper agents.
+func showAgentVersions(
+  target: AgentTarget,
+  json: Bool,
+  socketPath: String?,
+  context: AppContext
+) throws {
+  var entries: [AgentVersionOutputEntry] = []
+  var hadFailure = false
+
+  if target == .all {
+    entries.append(
+      AgentVersionOutputEntry(
+        key: "easybar",
+        label: "EasyBar",
+        status: AgentVersionStatus(
+          version: BuildInfo.appVersion,
+          protocolVersion: easyBarIPCProtocolVersion,
+          matchesEasyBar: true,
+          error: nil
+        )
+      )
+    )
+  }
+
+  let targets: [AgentTarget] = target == .all ? [.calendar, .network] : [target]
+  let resolutions: SharedAgentSocketResolutions?
+  if target == .all {
+    resolutions = try resolveAgentSockets()
+  } else {
+    resolutions = nil
+  }
+
+  for agent in targets {
+    do {
+      let entry: AgentVersionOutputEntry
+      switch agent {
+      case .calendar:
+        let resolution =
+          try resolutions?.calendar
+          ?? resolveCalendarAgentSocket(explicitPath: socketPath)
+        logSocketResolution(resolution, kind: "calendar agent", context: context)
+        let version = try AgentVersionClient.calendarAgentVersion(socketPath: resolution.path)
+        entry = agentVersionEntry(
+          key: "calendar",
+          label: "Calendar agent",
+          version: version.appVersion,
+          protocolVersion: version.protocolVersion
+        )
+
+      case .network:
+        let resolution =
+          try resolutions?.network
+          ?? resolveNetworkAgentSocket(explicitPath: socketPath)
+        logSocketResolution(resolution, kind: "network agent", context: context)
+        let version = try AgentVersionClient.networkAgentVersion(socketPath: resolution.path)
+        entry = agentVersionEntry(
+          key: "network",
+          label: "Network agent",
+          version: version.appVersion,
+          protocolVersion: version.protocolVersion
+        )
+
+      case .all:
+        continue
+      }
+
+      entries.append(entry)
+    } catch {
+      let label = agent == .calendar ? "Calendar agent" : "Network agent"
+      let message = error.localizedDescription
+      entries.append(
+        AgentVersionOutputEntry(
+          key: agent.rawValue,
+          label: label,
+          status: AgentVersionStatus(
+            version: nil,
+            protocolVersion: nil,
+            matchesEasyBar: false,
+            error: message
+          )
+        )
+      )
+      hadFailure = true
+    }
+  }
+
+  try CLIOutput.printAgentVersions(entries, json: json)
+  guard !hadFailure else {
+    throw AppError.reportedFailure
+  }
+}
+
+private func agentVersionEntry(
+  key: String,
+  label: String,
+  version: String,
+  protocolVersion: String
+) -> AgentVersionOutputEntry {
+  AgentVersionOutputEntry(
+    key: key,
+    label: label,
+    status: AgentVersionStatus(
+      version: version,
+      protocolVersion: protocolVersion,
+      matchesEasyBar: version == BuildInfo.appVersion
+        && protocolVersion == easyBarIPCProtocolVersion,
+      error: nil
+    )
+  )
+}
+
 private func resolveCalendarAgentSocket(
   explicitPath: String?
 ) throws -> SharedRuntimeSocketResolution {
@@ -146,7 +258,7 @@ private func resolveAgentSockets() throws -> SharedAgentSocketResolutions {
   } catch {
     throw AppError.message(
       "failed to resolve agent sockets from shared runtime config: "
-        + "\(error.localizedDescription). Fix the config before using agent restart all."
+        + "\(error.localizedDescription). Fix the config before targeting all agents."
     )
   }
 }

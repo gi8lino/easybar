@@ -43,6 +43,7 @@ easybar metrics --watch
 easybar agent restart calendar
 easybar agent restart network
 easybar agent restart all
+easybar agent version all
 easybar event emit workspace_change
 easybar logs --widget tailscale --since 30m
 easybar inbox list --unread
@@ -52,6 +53,9 @@ easybar inbox list --unread
 
 The CLI should stay small.
 
-Most commands use the main EasyBar control socket. Agent restart commands contact the calendar or network socket directly through the shared agent protocol. `easybar logs` reads the configured log directory and follows active files only when `--follow` is supplied.
+Most commands use the main EasyBar control socket. Agent restart and version commands contact the
+calendar or network socket directly through the shared agent protocol. Version queries therefore
+report the processes that are actually running. `easybar logs` reads the configured log directory
+and follows active files only when `--follow` is supplied.
 
 The CLI is a transport client, not a second source of application logic.

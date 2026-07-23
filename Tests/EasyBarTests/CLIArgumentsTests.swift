@@ -71,6 +71,21 @@ final class CLIArgumentsTests: XCTestCase {
     )
   }
 
+  func testAgentVersionTargetsAndJSONParse() throws {
+    XCTAssertEqual(
+      try parseArguments(["easybar", "agent", "version", "calendar"]).action,
+      .versionAgent(.calendar, json: false)
+    )
+    XCTAssertEqual(
+      try parseArguments(["easybar", "agent", "version", "network", "--json"]).action,
+      .versionAgent(.network, json: true)
+    )
+    XCTAssertEqual(
+      try parseArguments(["easybar", "agent", "version", "all"]).action,
+      .versionAgent(.all, json: false)
+    )
+  }
+
   func testEventEmitMapsPublicNameToSharedIPCCommand() throws {
     XCTAssertEqual(
       try parseArguments(["easybar", "event", "emit", "workspace-change"]).action,
@@ -240,6 +255,11 @@ final class CLIArgumentsTests: XCTestCase {
     XCTAssertThrowsError(
       try parseArguments([
         "easybar", "agent", "restart", "all", "--socket", "/tmp/easybar.sock",
+      ])
+    )
+    XCTAssertThrowsError(
+      try parseArguments([
+        "easybar", "agent", "version", "all", "--socket", "/tmp/easybar.sock",
       ])
     )
   }

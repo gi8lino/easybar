@@ -32,15 +32,15 @@ easybar logs --help
 
 ## Runtime commands
 
-| Command                         | Purpose                                                                       |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| `easybar refresh`               | Refresh the bar, widgets, and agent-backed data without reloading config.     |
-| `easybar config reload`         | Read `config.toml` again and rebuild the current bar.                         |
-| `easybar runtime restart`       | Restart only the Lua widget runtime using the currently loaded configuration. |
-| `easybar metrics`               | Print one runtime metrics snapshot.                                           |
-| `easybar metrics --watch`       | Continuously display runtime metrics and rolling graphs.                      |
-| `easybar logs`                  | Print recent retained logs and exit.                                          |
-| `easybar logs --follow`         | Print recent retained logs and continue following new matching entries.       |
+| Command                   | Purpose                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| `easybar refresh`         | Refresh the bar, widgets, and agent-backed data without reloading config.     |
+| `easybar config reload`   | Read `config.toml` again and rebuild the current bar.                         |
+| `easybar runtime restart` | Restart only the Lua widget runtime using the currently loaded configuration. |
+| `easybar metrics`         | Print one runtime metrics snapshot.                                           |
+| `easybar metrics --watch` | Continuously display runtime metrics and rolling graphs.                      |
+| `easybar logs`            | Print recent retained logs and exit.                                          |
+| `easybar logs --follow`   | Print recent retained logs and continue following new matching entries.       |
 
 See [Runtime Control](control.md) for the difference between refresh, reload, and restart operations. See [Metrics](metrics.md) for the fields included in a snapshot.
 
@@ -104,17 +104,17 @@ easybar logs --request-id lua-19 --json
 
 `--request-id` and `--since` search all matching retained history by default. Use `--lines` to limit that history explicitly. Request-correlated entries also carry a `run_id`, which distinguishes repeated request IDs from different EasyBar process runs.
 
-| Option                  | Purpose                                                                  |
-| ----------------------- | ------------------------------------------------------------------------ |
-| `--widget NAME`         | Match a Lua or native widget name.                                       |
-| `--runtime KIND`        | Match `app`, `lua`, or `agent`.                                          |
-| `--level LEVEL`         | Match the selected severity and higher.                                  |
-| `--request-id ID`       | Match one request across every retained process log.                     |
-| `--since TIME`          | Match entries since a duration such as `30m` or an ISO-8601 timestamp.   |
-| `--lines COUNT`, `-n`   | Limit the latest matching retained history.                              |
-| `--all`                 | Print all matching retained history.                                     |
-| `--follow`, `-f`        | Continue following new matching entries after retained history.          |
-| `--json`                | Emit JSON Lines with parsed fields, source, runtime, and widget metadata. |
+| Option                | Purpose                                                                   |
+| --------------------- | ------------------------------------------------------------------------- |
+| `--widget NAME`       | Match a Lua or native widget name.                                        |
+| `--runtime KIND`      | Match `app`, `lua`, or `agent`.                                           |
+| `--level LEVEL`       | Match the selected severity and higher.                                   |
+| `--request-id ID`     | Match one request across every retained process log.                      |
+| `--since TIME`        | Match entries since a duration such as `30m` or an ISO-8601 timestamp.    |
+| `--lines COUNT`, `-n` | Limit the latest matching retained history.                               |
+| `--all`               | Print all matching retained history.                                      |
+| `--follow`, `-f`      | Continue following new matching entries after retained history.           |
+| `--json`              | Emit JSON Lines with parsed fields, source, runtime, and widget metadata. |
 
 Filters compose. This prints errors from the Lua runtime during the last hour and exits:
 
@@ -132,11 +132,33 @@ History is limited to the active files and numbered archives retained by EasyBar
 
 ## Helper-agent commands
 
-| Command                           | Purpose                                            |
-| --------------------------------- | -------------------------------------------------- |
-| `easybar agent restart calendar`  | Restart the calendar agent through its socket.     |
-| `easybar agent restart network`   | Restart the network agent through its socket.      |
-| `easybar agent restart all`       | Attempt both restarts and report partial failures. |
+| Command                          | Purpose                                                  |
+| -------------------------------- | -------------------------------------------------------- |
+| `easybar agent version calendar` | Query the running calendar agent version.                |
+| `easybar agent version network`  | Query the running network agent version.                 |
+| `easybar agent version all`      | Show EasyBar and both running agent versions.            |
+| `easybar agent restart calendar` | Restart the calendar agent through its socket.           |
+| `easybar agent restart network`  | Restart the network agent through its socket.            |
+| `easybar agent restart all`      | Attempt both agent restarts and report partial failures. |
+
+Version commands query the running processes rather than inspecting binaries on disk. They include
+the shared agent-protocol version and mark a result when it does not match the current EasyBar CLI:
+
+```text
+EasyBar: 0.23.0 (protocol 1)
+Calendar agent: 0.23.0 (protocol 1)
+Network agent: 0.23.0 (protocol 1)
+```
+
+Use `--json` for scripts and diagnostics:
+
+```bash
+easybar agent version all --json
+```
+
+`easybar --version` remains the short command for the EasyBar CLI alone. A version command exits
+nonzero when a selected agent is unreachable or returns an invalid response. A different version is
+shown with `[mismatch]` and `matches_easybar: false`, but the query itself still succeeds.
 
 The agent acknowledges its restart request before exiting. Its Homebrew keep-alive service then launches it again. `--socket` can override the calendar or network socket for a single-agent restart. It cannot be used with `agent restart all`, because that operation needs two different sockets.
 
@@ -168,12 +190,12 @@ Hyphens and underscores are accepted in event names. These commands emit driver 
 
 ## Global options
 
-| Option                 | Purpose                                                  |
-| ---------------------- | -------------------------------------------------------- |
-| `--socket PATH`, `-s`  | Override the socket contacted by the selected operation. |
-| `--debug`, `-d`        | Print CLI diagnostics without changing app log levels.   |
-| `--version`, `-v`      | Print the installed CLI version.                         |
-| `--help`, `-h`         | Print root, group, or command-specific usage.             |
+| Option                | Purpose                                                  |
+| --------------------- | -------------------------------------------------------- |
+| `--socket PATH`, `-s` | Override the socket contacted by the selected operation. |
+| `--debug`, `-d`       | Print CLI diagnostics without changing app log levels.   |
+| `--version`, `-v`     | Print the installed CLI version.                         |
+| `--help`, `-h`        | Print root, group, or command-specific usage.            |
 
 Command-specific options such as `--config`, `--watch`, inbox fields, and log filters appear only in the relevant command's help.
 
@@ -188,7 +210,9 @@ easybar refresh --socket ~/.local/state/easybar/runtime/easybar.sock
 easybar agent restart calendar --socket ~/.local/state/easybar/runtime/calendar-agent.sock
 ```
 
-With `--debug`, the CLI reports whether each socket came from `--socket` or the shared config file. `agent restart all` cannot bypass config resolution because it needs two different agent sockets.
+With `--debug`, the CLI reports whether each socket came from `--socket` or the shared config file.
+Agent operations targeting `all` cannot bypass config resolution because they need two different
+agent sockets.
 
 The CLI and running app versions should normally match after a Homebrew upgrade:
 

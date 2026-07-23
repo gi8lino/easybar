@@ -57,8 +57,8 @@ struct CLIOption: Equatable {
   }
 }
 
-/// Helper-agent restart target selected by the CLI.
-enum AgentRestartTarget: String, Equatable {
+/// Helper-agent target selected by the CLI.
+enum AgentTarget: String, Equatable {
   case calendar
   case network
   case all
@@ -81,14 +81,15 @@ enum CLICommandKind: Equatable {
   case metrics
   case logs
   case validateConfig
-  case restartAgent(AgentRestartTarget)
+  case restartAgent(AgentTarget)
+  case versionAgent(AgentTarget)
   case emitEvent
   case inbox(InboxCLIVerb)
 
   /// Whether this command can target one explicit Unix socket.
   var acceptsSocketOverride: Bool {
     switch self {
-    case .logs, .restartAgent(.all):
+    case .logs, .restartAgent(.all), .versionAgent(.all):
       return false
     default:
       return true
@@ -152,7 +153,8 @@ enum CLIAction: Equatable {
   case control(IPC.Command)
   case metrics(watch: Bool)
   case validateConfig(configPath: String?)
-  case restartAgent(AgentRestartTarget)
+  case restartAgent(AgentTarget)
+  case versionAgent(AgentTarget, json: Bool)
   case logs(LogCommandOptions)
   case inbox(InboxCLICommand)
 }
@@ -431,6 +433,24 @@ enum CLI {
       path: ["agent", "restart", "all"],
       description: "Restart both helper agents and report partial failure",
       kind: .restartAgent(.all)
+    ),
+    .init(
+      path: ["agent", "version", "calendar"],
+      description: "Query the running calendar agent version",
+      kind: .versionAgent(.calendar),
+      options: [jsonOption]
+    ),
+    .init(
+      path: ["agent", "version", "network"],
+      description: "Query the running network agent version",
+      kind: .versionAgent(.network),
+      options: [jsonOption]
+    ),
+    .init(
+      path: ["agent", "version", "all"],
+      description: "Show EasyBar and both running agent versions",
+      kind: .versionAgent(.all),
+      options: [jsonOption]
     ),
     .init(
       path: ["event", "emit"],

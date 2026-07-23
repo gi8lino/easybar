@@ -54,6 +54,14 @@ private struct AppController {
           try restartAgents(context: context)
         }
 
+      case .versionAgent(let target, let json):
+        try showAgentVersions(
+          target: target,
+          json: json,
+          socketPath: parsed.socketPath,
+          context: context
+        )
+
       case .logs(let options):
         try showLogs(options: options, context: context)
 
@@ -74,6 +82,11 @@ private struct AppController {
       return 0
     } catch AppError.message(let message) {
       CLIOutput.printError(message)
+    } catch AppError.commandFailed(let message) {
+      CLIOutput.printError(message)
+      return 1
+    } catch AppError.reportedFailure {
+      return 1
     } catch {
       CLIOutput.printError("\(error)")
     }
