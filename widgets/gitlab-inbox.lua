@@ -11,11 +11,11 @@ local SOURCE_PRESENTATION = {
 	color = "#FC6D26",
 }
 local POLL_INTERVAL_SECONDS = 300
-local WAKE_REFRESH_DELAY_SECONDS = 3
+local NETWORK_READY_DELAY_SECONDS = 3
 local REFRESH_BACKOFF_SECONDS = { 2, 5 }
 local work_items = {}
 local refreshing = false
-local pending_wake_refresh = nil
+local pending_refresh = nil
 local log = easybar.log
 
 easybar.inbox.configure(SOURCE, {
@@ -148,9 +148,9 @@ local function refresh(reason)
 		return
 	end
 
-	if pending_wake_refresh ~= nil then
-		pending_wake_refresh:cancel()
-		pending_wake_refresh = nil
+	if pending_refresh ~= nil then
+		pending_refresh:cancel()
+		pending_refresh = nil
 	end
 
 	refreshing = true
@@ -228,16 +228,19 @@ local function refresh(reason)
 	end)
 end
 
-local function schedule_wake_refresh()
-	if pending_wake_refresh ~= nil then
-		pending_wake_refresh:cancel()
+local function schedule_refresh(reason, delay_seconds)
+	reason = tostring(reason or "unspecified")
+	delay_seconds = tonumber(delay_seconds) or 0
+
+	if pending_refresh ~= nil then
+		pending_refresh:cancel()
 	end
 
-	log(easybar.level.trace, "inbox wake refresh scheduled delay_seconds=" .. tostring(WAKE_REFRESH_DELAY_SECONDS))
+	log(easybar.level.trace, "inbox refresh scheduled reason=" .. reason .. " delay_seconds=" .. tostring(delay_seconds))
 
-	pending_wake_refresh = easybar.after(WAKE_REFRESH_DELAY_SECONDS, function()
-		pending_wake_refresh = nil
-		refresh("wake")
+	pending_refresh = easybar.after(delay_seconds, function()
+		pending_refresh = nil
+		refresh(reason)
 	end)
 end
 
@@ -292,6 +295,8 @@ timer:subscribe(easybar.events.forced, function()
 	refresh("forced")
 end)
 
-timer:subscribe(easybar.events.system_woke, schedule_wake_refresh)
+timer:subscribe(easybar.events.system_woke, function()
+	schedule_refresh("wake", NETWORK_READY_DELAY_SECONDS)
+end)
 
-refresh("startup")
+schedule_refresh("startup", NETWORK_READY_DELAY_SECONDS)

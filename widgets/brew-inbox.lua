@@ -11,7 +11,7 @@ local SOURCE_PRESENTATION = {
 	color = "#FBB040",
 }
 local POLL_INTERVAL_SECONDS = 30 * 60
-local WAKE_REFRESH_DELAY_SECONDS = 3
+local NETWORK_READY_DELAY_SECONDS = 3
 local REFRESH_BACKOFF_SECONDS = { 2, 5 }
 
 local EXEC = {
@@ -32,7 +32,7 @@ local state = {
 	can_cancel = false,
 	cancellation_requested = false,
 }
-local pending_wake_refresh = nil
+local pending_refresh = nil
 local refresh
 local log = easybar.log
 
@@ -206,9 +206,10 @@ refresh = function(reason)
 		)
 		return
 	end
-	if pending_wake_refresh ~= nil then
-		pending_wake_refresh:cancel()
-		pending_wake_refresh = nil
+
+	if pending_refresh ~= nil then
+		pending_refresh:cancel()
+		pending_refresh = nil
 	end
 
 	state.operation = "Checking outdated packages…"
@@ -355,14 +356,19 @@ local function package_for_id(id)
 	return nil
 end
 
-local function schedule_wake_refresh()
-	if pending_wake_refresh ~= nil then
-		pending_wake_refresh:cancel()
+local function schedule_refresh(reason, delay_seconds)
+	reason = tostring(reason or "unspecified")
+	delay_seconds = tonumber(delay_seconds) or 0
+
+	if pending_refresh ~= nil then
+		pending_refresh:cancel()
 	end
-	log(easybar.level.trace, "inbox wake refresh scheduled delay_seconds=" .. tostring(WAKE_REFRESH_DELAY_SECONDS))
-	pending_wake_refresh = easybar.after(WAKE_REFRESH_DELAY_SECONDS, function()
-		pending_wake_refresh = nil
-		refresh("wake")
+
+	log(easybar.level.trace, "inbox refresh scheduled reason=" .. reason .. " delay_seconds=" .. tostring(delay_seconds))
+
+	pending_refresh = easybar.after(delay_seconds, function()
+		pending_refresh = nil
+		refresh(reason)
 	end)
 end
 
@@ -438,11 +444,17 @@ local timer = easybar.add(easybar.kind.item, "brew_inbox_timer", {
 		refresh("interval")
 	end,
 })
+
 timer:subscribe(easybar.events.forced, function()
 	refresh("forced")
 end)
-timer:subscribe(easybar.events.system_woke, schedule_wake_refresh)
-timer:subscribe(easybar.events.session_active, function()
-	refresh("session_active")
+
+timer:subscribe(easybar.events.system_woke, function()
+	schedule_refresh("wake", NETWORK_READY_DELAY_SECONDS)
 end)
-refresh("startup")
+
+timer:subscribe(easybar.events.session_active, function()
+	schedule_refresh("session_active", NETWORK_READY_DELAY_SECONDS)
+end)
+
+schedule_refresh("startup", NETWORK_READY_DELAY_SECONDS)
