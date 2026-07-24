@@ -31,23 +31,40 @@
 local M = {}
 
 local TRANSIENT_NETWORK_PATTERNS = {
+	-- Generic timeouts.
 	"i/o timeout",
 	"timed out",
 	"timeout",
+
+	-- Temporary DNS and resolver failures.
 	"temporary failure",
 	"try again",
 	"could not resolve host",
 	"name or service not known",
 	"nodename nor servname",
+	"no such host",
+	"server misbehaving",
+
+	-- Routing and local network availability.
 	"network is unreachable",
 	"no route to host",
 	"network is down",
 	"host is down",
+	"cannot assign requested address",
+	"can't assign requested address",
+
+	-- Connection interruptions.
 	"connection reset",
 	"connection refused",
 	"connection closed",
+	"connection aborted",
+	"broken pipe",
+
+	-- TLS and truncated responses.
 	"tls handshake timeout",
 	"unexpected eof",
+
+	-- Temporary HTTP gateway/server failures.
 	"service unavailable",
 	"bad gateway",
 	"gateway timeout",
