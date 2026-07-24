@@ -95,6 +95,7 @@ LOCAL_AGENT_DIR ?= $(HOME)/Library/Application Support/EasyBar/Agents
 LOCAL_LAUNCH_AGENT_DIR ?= $(HOME)/Library/LaunchAgents
 LOCAL_LOG_DIR ?= $(HOME)/Library/Logs/EasyBar
 LOCAL_STATE_DIR ?= $(HOME)/Library/Application Support/EasyBar/LocalInstall
+WIDGETS_INSTALL_DIR ?= $(HOME)/.config/easybar/widgets
 IMAGE_CONVERT ?= magick
 PRETTIER ?= npx prettier
 STYLUA ?= stylua
@@ -127,7 +128,7 @@ endif
         build bundle package release app cli validate-config \
         fmt fmt-all fmt-swift fmt-lua fmt-rust fmt-markdown \
         lint lint-swift lint-lua lint-rust check-lua test \
-        clean clean-dist run run-debug run-trace install-local uninstall-local stop restart-app icons screenshots check-screenshots \
+        clean clean-dist run run-debug run-trace install-local install-widgets uninstall-local stop restart-app icons screenshots check-screenshots \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli build-toml-debug build-toml-release \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         sign notarize \
@@ -228,7 +229,6 @@ check-lua: ## Parse Lua sources and smoke-test every bundled widget.
 
 lint-rust: ## Check Rust formatting without modifying files.
 	@cargo fmt --manifest-path Rust/EasyBarTOML/Cargo.toml --check
-
 
 build-toml-debug: ## Build the lossless TOML library for local Swift builds.
 	@scripts/build/build-toml-library.sh debug "$(RUN_ARCH)"
@@ -345,6 +345,11 @@ install-local: ## Build and install the current checkout with a Git-derived loca
 		--launch-agent-dir "$(LOCAL_LAUNCH_AGENT_DIR)" \
 		--log-dir "$(LOCAL_LOG_DIR)" \
 		--state-dir "$(LOCAL_STATE_DIR)"
+
+install-widgets: ## Interactively copy bundled widgets into WIDGETS_INSTALL_DIR.
+	@scripts/dev/install-widgets.sh \
+		"$(CURDIR)/widgets" \
+		"$(WIDGETS_INSTALL_DIR)"
 
 uninstall-local: ## Remove the local installation and restore the previous Homebrew service states.
 	@scripts/dev/uninstall-local.sh \
@@ -486,5 +491,3 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
-
-
