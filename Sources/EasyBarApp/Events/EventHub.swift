@@ -416,6 +416,10 @@ actor EventHub {
       return false
     }
 
+    if appEvent == .manualRefresh {
+      return luaForwardedAppEvents.contains(EventCatalog.forcedEventName)
+    }
+
     if appEvent == .intervalTick {
       return luaForwardedAppEvents.contains { $0.hasPrefix(Self.intervalTickPrefix) }
     }

@@ -23,6 +23,10 @@ The control socket is used for commands such as:
 
 Requests and responses are typed JSON.
 
+The internal `manual_refresh` command is exposed to Lua widgets as the public `forced` event. This
+keeps the control protocol name separate from `easybar.events.forced` while ensuring
+`easybar refresh` immediately invokes subscribed Lua handlers.
+
 ## Why it exists
 
 The boundary exists so that:

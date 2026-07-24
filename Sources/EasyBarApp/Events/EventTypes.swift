@@ -161,10 +161,18 @@ struct EasyBarEventPayload: Sendable {
     return appEvent?.rawValue ?? widgetEvent?.rawValue ?? ""
   }
 
+  /// Public event name sent across the Lua runtime boundary.
+  var luaEventName: String {
+    if appEvent == .manualRefresh {
+      return EventCatalog.forcedEventName
+    }
+    return eventName
+  }
+
   /// Structured payload sent to Lua.
   var luaPayload: LuaEventPayload {
     LuaEventPayload(
-      name: eventName,
+      name: luaEventName,
       widgetID: widgetID,
       targetWidgetID: targetWidgetID,
       source: source,

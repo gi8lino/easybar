@@ -22,6 +22,10 @@ end)
 
 This attaches one handler to one event token.
 
+`easybar.events.forced` is delivered when EasyBar starts the Lua runtime and whenever a refresh is
+requested from the controller menu or with `easybar refresh`. Use it when a widget should fetch or
+recompute its state immediately instead of waiting for its next interval.
+
 ## Mouse interaction
 
 ```lua

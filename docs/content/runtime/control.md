@@ -56,7 +56,7 @@ This:
 
 - refreshes the bar and widgets using the currently loaded config
 - pulls fresh data from agents
-- re-emits refresh-style state so widgets can update immediately
+- emits `easybar.events.forced` to subscribed Lua widgets so they can update immediately
 - does not reread `config.toml` from disk
 - does not restart the Lua runtime
 
@@ -128,5 +128,4 @@ Use this from local scripts when an external action should notify widgets that w
 - [Metrics](metrics.md)
 - [Troubleshooting](troubleshooting.md)
 - [Control Socket](../internals/architecture/control-socket.md)
-
 

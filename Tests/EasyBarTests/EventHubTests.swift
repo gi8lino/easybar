@@ -115,6 +115,47 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.luaPayload.source, "test timer")
   }
 
+  /// Verifies that an internal manual refresh reaches Lua through its public forced token.
+  func testManualRefreshForwardsToLuaAsForced() async throws {
+    let forwardedPayloads = LockedState<[EasyBarEventPayload]>([])
+    let hub = EventHub(
+      logger: ProcessLogger(
+        label: "eventhub.test",
+        minimumLevel: .error
+      ),
+      enqueueLuaEvent: { payload in
+        forwardedPayloads.withLock { $0.append(payload) }
+      }
+    )
+
+    await hub.setLuaForwardedAppEvents([EventCatalog.forcedEventName])
+    await hub.emit(.manualRefresh, source: "test refresh")
+
+    let payload = try XCTUnwrap(forwardedPayloads.withLock(\.first))
+    XCTAssertEqual(payload.eventName, AppEvent.manualRefresh.rawValue)
+    XCTAssertEqual(payload.luaPayload.name, EventCatalog.forcedEventName)
+    XCTAssertEqual(payload.luaPayload.source, "test refresh")
+  }
+
+  /// Verifies that manual refreshes are not forwarded when Lua did not subscribe to forced.
+  func testManualRefreshRequiresForcedLuaSubscription() async {
+    let forwardedPayloads = LockedState<[EasyBarEventPayload]>([])
+    let hub = EventHub(
+      logger: ProcessLogger(
+        label: "eventhub.test",
+        minimumLevel: .error
+      ),
+      enqueueLuaEvent: { payload in
+        forwardedPayloads.withLock { $0.append(payload) }
+      }
+    )
+
+    await hub.setLuaForwardedAppEvents([AppEvent.networkChange.rawValue])
+    await hub.emit(.manualRefresh)
+
+    XCTAssertTrue(forwardedPayloads.withLock(\.isEmpty))
+  }
+
   /// Verifies that empty event filter behaves like unfiltered subscription.
   func testEmptyEventFilterBehavesLikeUnfilteredSubscription() async {
     let hub = Self.makeHub()
